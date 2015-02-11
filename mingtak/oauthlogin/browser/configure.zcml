@@ -1,0 +1,19 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:i18n="http://namespaces.zope.org/i18n"
+    i18n_domain="twgov.content">
+
+  <browser:page
+    for="*"
+    name="facebookLogin"
+    permission="zope2.View"
+    class=".oauthLogin.FacebookLogin" />
+
+  <browser:page
+    for="*"
+    name="googleLogin"
+    permission="zope2.View"
+    class=".oauthLogin.GoogleLogin" />
+
+</configure>

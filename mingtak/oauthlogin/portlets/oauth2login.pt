@@ -1,0 +1,9 @@
+<tal:sections i18n:domain="mingtak.oauthlogin">
+  <h1 i18n:translate="">Multi login</h1>
+  <div tal:define="loginMethods python:context.portal_registry['mingtak.oauthlogin.oauth2login.IOauth2Setting.allowList']">
+    <tal:oauthLogin repeat="oauthLogin loginMethods">
+      <a tal:attributes="href string:/${oauthLogin}Login" tal:content="string:${oauthLogin}Login"></a>
+      <span> / </span>
+    </tal:oauthLogin>
+  </div>
+</tal:sections>

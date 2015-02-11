@@ -1,0 +1,3 @@
+<registry>
+  <records interface="mingtak.oauthlogin.oauth2login.IOauth2Setting" />
+</registry>
