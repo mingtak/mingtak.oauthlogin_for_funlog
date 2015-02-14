@@ -31,8 +31,8 @@
    <element value="view"/>
   </property>
   <property name="default_view_fallback">False</property>
-  <property name="add_permission">cmf.AddPortalContent</property>
-
+<!--  <property name="add_permission">cmf.AddPortalContent</property> -->
+  <property name="add_permission">cmf.ManagePortal</property>
 
   <!-- Method aliases -->
   <alias from="(Default)" to="(dynamic view)" />
@@ -47,6 +47,7 @@
   </action>
   <action title="Edit" action_id="edit" category="object" condition_expr=""
     url_expr="string:${object_url}/edit" visible="True">
-    <permission value="Modify portal content" />
+<!--    <permission value="Modify portal content" /> -->
+    <permission value="Manage portal" />
   </action>
 </object>
