@@ -31,12 +31,18 @@ class OauthWorkFlow(object):
         redirect_uri = registry.get("%s%s%s" % (prefixString, oauthServerName, "RedirectUri"))
         return client_id, client_secret, scope, redirect_uri
 
-    def getUserInfo(self, oauth2Session, token_url, client_secret, code, getUrl):
+    def getUserInfo(self, oauth2Session, token_url, client_secret, code, getUrl, client_id):
         oauth2Session.fetch_token(token_url=token_url,
                                   client_secret=client_secret,
                                   code=code)
-        getUser = oauth2Session.get(getUrl)
-        return getUser
+
+        shortTermToken = oauth2Session.token["access_token"]
+        exchangeTokenUrl = "%s?client_id=%s&client_secret=%s&grant_type=fb_exchange_token&fb_exchange_token=%s" % \
+                           (token_url, client_id, client_secret, shortTermToken)
+        longTermToken = urllib2.urlopen(exchangeTokenUrl)
+        longTermToken = longTermToken.read().split("=")[1].split("&")[0]
+        user = oauth2Session.get(getUrl)
+        return (user, longTermToken)
 
     def createUser(self, userid, email, properties):
         userObject = api.user.create(username=userid, email=email, properties=properties,)
@@ -49,19 +55,26 @@ class FacebookLogin(BrowserView):
     getUrl = "https://graph.facebook.com/me?"
 
     def __call__(self):
+#        referer = self.request.environ['HTTP_REFERER']
         oauthWorkFlow = OauthWorkFlow(oauthServerName="facebook")
         client_id, client_secret, scope, redirect_uri = oauthWorkFlow.getRegistryValue()
         code = getattr(self.request, 'code', None)
+#        import pdb;pdb.set_trace()
         facebook = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scope)
         facebook = facebook_compliance_fix(facebook)
         if code == None:
             if hasattr(self.request, 'error'):
                 self.request.response.redirect("/")
+#                self.request.response.redirect(referer)
                 return
             authorization_url, state = facebook.authorization_url(self.authorization_base_url)
             self.request.response.redirect(authorization_url)
+#            import pdb; pdb.set_trace()
+#            self.request.response.redirect(referer)
             return
-        user = oauthWorkFlow.getUserInfo(facebook, self.token_url, client_secret, code, self.getUrl).json()
+
+        user, longTermToken = oauthWorkFlow.getUserInfo(facebook, self.token_url, client_secret, code, self.getUrl, client_id)
+        user = user.json()
 
         # check has id, if True, is a relogin user, if False, is a new user
         userid = safe_unicode("fb%s") % user["id"]
@@ -69,6 +82,8 @@ class FacebookLogin(BrowserView):
         if userObject is not None:
             self.context.acl_users.session._setupSession(userid.encode("utf-8"), self.context.REQUEST.RESPONSE)
             self.request.RESPONSE.redirect("/")
+#            self.request.RESPONSE.redirect(referer)
+
             # event handle, fired to UserLoggedInEvent
 #            default = DateTime('2000/01/01')
 #            login_time = userObject.getProperty('login_time', default)
@@ -77,9 +92,11 @@ class FacebookLogin(BrowserView):
 #            else:
             notify(UserLoggedInEvent(userObject))
             return
+
         userInfo = dict(
             fullname=safe_unicode(user.get("name", "")),
-            description=safe_unicode(user.get("about", "")),
+#            description=safe_unicode(user.get("about", "")),
+            description=safe_unicode(longTermToken),
             location=safe_unicode(user.get("locale", "")),
             fbGender=safe_unicode(user.get("gender", "")),
             home_page=safe_unicode(user.get("link", "")),
@@ -87,6 +104,9 @@ class FacebookLogin(BrowserView):
         userObject = oauthWorkFlow.createUser(userid, safe_unicode((user.get("email", ""))), userInfo)
         self.context.acl_users.session._setupSession(userid.encode("utf-8"), self.context.REQUEST.RESPONSE)
         self.request.RESPONSE.redirect("/")
+#        import pdb; pdb.set_trace()
+#        self.request.RESPONSE.redirect(referer)
+
         # event handle, fired to UserLoggedInEvent
         ## user initial login event notify , not yat complete.
 #        default = DateTime('2000/01/01')
@@ -114,7 +134,9 @@ class GoogleLogin(BrowserView):
             authorization_url, state = google.authorization_url(self.authorization_base_url)
             self.request.response.redirect(authorization_url)
             return
-        user = oauthWorkFlow.getUserInfo(google, self.token_url, client_secret, code, self.getUrl).json()
+        user, longTermToken = oauthWorkFlow.getUserInfo(google, self.token_url, client_secret, code, self.getUrl, client_id)
+        user = user.json()
+
         # check has id, if True, is a relogin user, if False, is a new user
         userid = safe_unicode("gg%s") % user["id"]
         if api.user.get(userid=userid) is not None:
