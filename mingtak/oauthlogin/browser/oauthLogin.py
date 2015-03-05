@@ -55,22 +55,19 @@ class FacebookLogin(BrowserView):
     getUrl = "https://graph.facebook.com/me?"
 
     def __call__(self):
-#        referer = self.request.environ['HTTP_REFERER']
+        referer = self.request.environ['HTTP_REFERER']
         oauthWorkFlow = OauthWorkFlow(oauthServerName="facebook")
         client_id, client_secret, scope, redirect_uri = oauthWorkFlow.getRegistryValue()
         code = getattr(self.request, 'code', None)
-#        import pdb;pdb.set_trace()
         facebook = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scope)
         facebook = facebook_compliance_fix(facebook)
         if code == None:
             if hasattr(self.request, 'error'):
-                self.request.response.redirect("/")
-#                self.request.response.redirect(referer)
+#                self.request.response.redirect("/")
+                self.request.response.redirect(referer)
                 return
             authorization_url, state = facebook.authorization_url(self.authorization_base_url)
             self.request.response.redirect(authorization_url)
-#            import pdb; pdb.set_trace()
-#            self.request.response.redirect(referer)
             return
 
         user, longTermToken = oauthWorkFlow.getUserInfo(facebook, self.token_url, client_secret, code, self.getUrl, client_id)
@@ -81,8 +78,8 @@ class FacebookLogin(BrowserView):
         userObject = api.user.get(userid=userid)
         if userObject is not None:
             self.context.acl_users.session._setupSession(userid.encode("utf-8"), self.context.REQUEST.RESPONSE)
-            self.request.RESPONSE.redirect("/")
-#            self.request.RESPONSE.redirect(referer)
+#            self.request.RESPONSE.redirect("/")
+            self.request.RESPONSE.redirect(referer)
 
             # event handle, fired to UserLoggedInEvent
 #            default = DateTime('2000/01/01')
@@ -103,9 +100,8 @@ class FacebookLogin(BrowserView):
         )
         userObject = oauthWorkFlow.createUser(userid, safe_unicode((user.get("email", ""))), userInfo)
         self.context.acl_users.session._setupSession(userid.encode("utf-8"), self.context.REQUEST.RESPONSE)
-        self.request.RESPONSE.redirect("/")
-#        import pdb; pdb.set_trace()
-#        self.request.RESPONSE.redirect(referer)
+#        self.request.RESPONSE.redirect("/")
+        self.request.RESPONSE.redirect(referer)
 
         # event handle, fired to UserLoggedInEvent
         ## user initial login event notify , not yat complete.
